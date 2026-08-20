@@ -1,3 +1,7 @@
+provider "aws" {
+  region = var.aws_region
+}
+
 # Random password for the database — Terraform generates this, never hardcoded
 resource "random_password" "db" {
   length  = 16
