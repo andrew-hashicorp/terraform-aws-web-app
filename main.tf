@@ -47,6 +47,7 @@ resource "aws_db_instance" "main" {
   engine              = "postgres"
   engine_version      = "15"
   instance_class      = "db.t3.micro"
+  allocated_storage   = 20
   db_name             = var.db_name
   username            = "appuser"
   password            = random_password.db.result
