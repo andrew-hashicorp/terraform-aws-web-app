@@ -85,6 +85,8 @@ resource "aws_instance" "app" {
     docker run -d \
       -p 80:3000 \
       -e DATABASE_URL="postgresql://appuser:${random_password.db.result}@${aws_db_instance.main.endpoint}/${var.db_name}" \
+      -e PGSSLMODE=require \
+      -e NODE_TLS_REJECT_UNAUTHORIZED=0 \
       -e PORT=3000 \
       --restart always \
       ${var.docker_image}
