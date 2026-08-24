@@ -76,17 +76,26 @@ resource "aws_instance" "app" {
   ami                    = data.aws_ami.amazon_linux.id
   instance_type          = var.instance_type
   vpc_security_group_ids = [aws_security_group.app.id]
+  iam_instance_profile   = aws_iam_instance_profile.app.name
 
   user_data = <<-EOF
     #!/bin/bash
-    yum install -y docker
+    yum install -y docker awscli
     systemctl start docker
     systemctl enable docker
+
+    S3_BUCKET=$(aws secretsmanager get-secret-value \
+      --region ${var.aws_region} \
+      --secret-id "/${var.app_name}/s3_bucket_name" \
+      --query SecretString --output text 2>/dev/null || echo "")
+
     docker run -d \
       -p 80:3000 \
       -e DATABASE_URL="postgresql://appuser:${random_password.db.result}@${aws_db_instance.main.endpoint}/${var.db_name}" \
       -e PGSSLMODE=require \
       -e NODE_TLS_REJECT_UNAUTHORIZED=0 \
+      -e S3_BUCKET_NAME="$S3_BUCKET" \
+      -e AWS_REGION="${var.aws_region}" \
       -e PORT=3000 \
       --restart always \
       ${var.docker_image}
@@ -95,3 +104,36 @@ resource "aws_instance" "app" {
     Name = var.app_name
   }
 }
+
+resource "aws_iam_role" "app" {
+  name = "${var.app_name}-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "app" {
+  name = "${var.app_name}-policy"
+  role = aws_iam_role.app.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["secretsmanager:GetSecretValue"]
+      Resource = "arn:aws:secretsmanager:${var.aws_region}:*:secret:/${var.app_name}/*"
+    }]
+   })
+ }
+
+resource "aws_iam_instance_profile" "app" {
+ name = "${var.app_name}-profile"
+ role = aws_iam_role.app.name
+}
+
