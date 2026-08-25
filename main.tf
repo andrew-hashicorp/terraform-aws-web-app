@@ -79,10 +79,11 @@ data "aws_ami" "amazon_linux" {
 
 # EC2 instance — installs Docker and runs your container on startup
 resource "aws_instance" "app" {
-  ami                    = data.aws_ami.amazon_linux.id
-  instance_type          = var.instance_type
-  vpc_security_group_ids = [aws_security_group.app.id]
-  iam_instance_profile   = aws_iam_instance_profile.app.name
+  ami                         = data.aws_ami.amazon_linux.id
+  instance_type               = var.instance_type
+  vpc_security_group_ids      = [aws_security_group.app.id]
+  iam_instance_profile        = aws_iam_instance_profile.app.name
+  user_data_replace_on_change = true
 
   user_data = <<-EOF
     #!/bin/bash
