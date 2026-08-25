@@ -20,6 +20,12 @@ resource "aws_security_group" "app" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["18.237.140.160/29"]  # EC2 Instance Connect us-west-2
+  }
   egress {
     from_port   = 0
     to_port     = 0
