@@ -66,20 +66,23 @@ resource "aws_db_instance" "main" {
   }
 }
 
- # Find the latest Amazon Linux 2023 AMI — this is the OS for the EC2 instance
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-
+# HashiCorp approved Ubuntu 24.04 base AMI (includes Uptycs EDR agent)
+data "aws_ami" "hc_base" {
   filter {
     name   = "name"
-    values = ["al2023-ami-*-x86_64"]
+    values = ["hc-base-ubuntu-2404-amd64-*"]
   }
+  filter {
+    name   = "state"
+    values = ["available"]
+  }
+  most_recent = true
+  owners      = ["888995627335"]
 }
 
 # EC2 instance — installs Docker and runs your container on startup
 resource "aws_instance" "app" {
-  ami                         = data.aws_ami.amazon_linux.id
+  ami                         = data.aws_ami.hc_base.id
   instance_type               = var.instance_type
   vpc_security_group_ids      = [aws_security_group.app.id]
   iam_instance_profile        = aws_iam_instance_profile.app.name
@@ -87,7 +90,8 @@ resource "aws_instance" "app" {
 
   user_data = <<-EOF
     #!/bin/bash
-    yum install -y docker awscli
+    apt-get update -y
+    apt-get install -y docker.io awscli
     systemctl start docker
     systemctl enable docker
 
